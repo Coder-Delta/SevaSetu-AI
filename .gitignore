@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+.venv/
+env/
+*.so
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Vector store data
+data/vector_db/chroma_store/
+
+# Object storage data
+data/object_storage/
+
+# Environment files
+.env
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node / frontend
+node_modules/
+apps/web/dist/
+
+# pytest
+.pytest_cache/
+__pycache__/
+
+# Docker
+docker-data/
+
+# Logs
+*.log
