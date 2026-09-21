@@ -1,8 +1,44 @@
 from typing import List, Dict, Any, Optional
+from sqlalchemy import or_
+
 from data.vector_db.config import get_or_create_collection
 from data.relational_db.database import SessionLocal
 from data.relational_db.models.scheme import Scheme
 from uuid import UUID
+
+
+def _fallback_search(query: str, top_k: int) -> List[Dict[str, Any]]:
+    search_terms = [term.strip() for term in query.split() if term.strip()]
+    if not search_terms:
+        return []
+
+    search_filters = []
+    for term in search_terms:
+        like_term = f"%{term}%"
+        search_filters.extend(
+            [
+                Scheme.scheme_name.ilike(like_term),
+                Scheme.details.ilike(like_term),
+                Scheme.benefits.ilike(like_term),
+                Scheme.eligibility.ilike(like_term),
+                Scheme.tags.ilike(like_term),
+            ]
+        )
+
+    db = SessionLocal()
+    try:
+        schemes = (
+            db.query(Scheme)
+            .filter(Scheme.is_active.is_(True), or_(*search_filters))
+            .limit(top_k)
+            .all()
+        )
+        return [
+            {"scheme": scheme, "relevance_score": 0.5}
+            for scheme in schemes
+        ]
+    finally:
+        db.close()
 
 def search_schemes(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
     """
@@ -10,7 +46,10 @@ def search_schemes(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
     Returns:
         List of Dict containing scheme model details and the relevance score.
     """
-    collection = get_or_create_collection()
+    try:
+        collection = get_or_create_collection()
+    except (ImportError, OSError):
+        return _fallback_search(query, top_k)
     
     # Query vector store
     results = collection.query(

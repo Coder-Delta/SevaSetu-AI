@@ -155,24 +155,23 @@ def generate_response(
     )
 
     if settings.GROQ_API_KEY:
-        from langchain_core.prompts import ChatPromptTemplate
-
-        llm = get_llm()
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
-            ("human", "{query}")
-        ])
-
-        chain = prompt | llm
-
         try:
+            from langchain_core.prompts import ChatPromptTemplate
+
+            llm = get_llm()
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", system_prompt),
+                ("human", "{query}")
+            ])
+
+            chain = prompt | llm
             response = chain.invoke({
                 "context": context,
                 "user_profile": profile_str,
                 "query": query
             })
             ai_text = response.content
-        except Exception:
+        except (ImportError, RuntimeError):
             pass
         
     # Format schemes referenced for output
