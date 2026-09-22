@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     # Groq
     GROQ_API_KEY: str = ""
-    GROQ_MODEL_NAME: str = "llama-3.3-70b-specdec"
+    GROQ_MODEL_NAME: str = "openai/gpt-oss-120b"
 
     # Embeddings
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"

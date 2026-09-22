@@ -81,6 +81,9 @@ source venv/bin/activate   # On Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
+# Or install the project with the optional CPU-only RAG stack
+uv sync --extra rag-cpu
+
 # Configure environment
 cp .env.example .env
 # Edit .env with your settings (Groq API key, etc.)
@@ -88,6 +91,10 @@ cp .env.example .env
 # Run the API server
 uvicorn services.api_gateway.main:app --host 127.0.0.1 --port 8000 --reload
 ```
+
+The `rag-cpu` extra restores ChromaDB, LangChain, and sentence-transformers with
+the CPU-only PyTorch wheel. Vercel installs only the default project dependencies
+so its serverless function stays below the bundle-size limit.
 
 ### Frontend Setup
 

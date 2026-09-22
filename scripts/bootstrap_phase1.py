@@ -39,8 +39,17 @@ def upsert_schemes(limit: int | None = None) -> int:
     db = SessionLocal()
     try:
         persisted: List[Scheme] = []
+        seen_slugs: set[str] = set()
+        skipped_duplicates = 0
         for scheme_data in loaded_schemes:
-            scheme = db.query(Scheme).filter(Scheme.slug == scheme_data["slug"]).first()
+            slug = scheme_data["slug"]
+            # The dataset contains repeated slugs; keep the first occurrence.
+            if slug in seen_slugs:
+                skipped_duplicates += 1
+                continue
+            seen_slugs.add(slug)
+
+            scheme = db.query(Scheme).filter(Scheme.slug == slug).first()
             if scheme is None:
                 scheme = Scheme(**scheme_data)
                 db.add(scheme)
@@ -48,6 +57,9 @@ def upsert_schemes(limit: int | None = None) -> int:
                 for key, value in scheme_data.items():
                     setattr(scheme, key, value)
             persisted.append(scheme)
+
+        if skipped_duplicates:
+            print(f"Skipped {skipped_duplicates} duplicate-slug rows from the dataset.")
 
         db.commit()
 

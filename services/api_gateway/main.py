@@ -7,6 +7,7 @@ from data.relational_db.database import init_db
 from packages.shared.config import settings
 from services.api_gateway.routes import admin, applications, auth, chat, profile, schemes
 
+logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(
@@ -36,7 +37,15 @@ app.include_router(admin.router, prefix="/api/v1")
 
 @app.on_event("startup")
 def on_startup() -> None:
-    init_db()
+    # A database outage must not take the whole API down: log it and keep
+    # serving endpoints that don't need the DB (e.g. /healthz).
+    try:
+        init_db()
+    except Exception:
+        logger.exception(
+            "Database init failed at startup; API continues without DB access. "
+            "Check DATABASE_URL credentials in .env."
+        )
 
 
 @app.get("/")
@@ -51,4 +60,14 @@ def read_root() -> dict[str, object]:
 
 @app.get("/healthz")
 def healthcheck() -> dict[str, str]:
-    return {"status": "ok"}
+    from sqlalchemy import text
+
+    from data.relational_db.database import engine
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {"status": "ok", "database": "ok"}
+    except Exception:
+        logger.exception("Database health check failed")
+        return {"status": "ok", "database": "unreachable"}

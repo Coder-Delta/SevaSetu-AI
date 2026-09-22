@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from uuid import UUID
 
@@ -11,6 +12,8 @@ from data.relational_db.models.user import User
 from packages.shared.auth import get_current_user
 from packages.shared.schemas import ChatRequest, ChatResponse
 from services.api_gateway.routes.common import build_user_profile_dict
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -64,11 +67,23 @@ def chat_with_assistant(
     }
     conversation.messages = [*conversation.messages, user_message]
 
-    generated = generate_response(
-        query=payload.message,
-        language=payload.language,
-        user_profile=build_user_profile_dict(current_user),
-    )
+    try:
+        generated = generate_response(
+            query=payload.message,
+            language=payload.language,
+            user_profile=build_user_profile_dict(current_user),
+        )
+    except Exception:
+        # An LLM outage must not 500 the whole request; degrade to the
+        # deterministic dataset-based answer.
+        logger.exception("AI response generation failed; using fallback reply")
+        from services.orchestrator.rag.chain import build_fallback_response
+
+        generated = {
+            "response": build_fallback_response(payload.message, [], payload.language),
+            "language": payload.language,
+            "schemes_referenced": [],
+        }
     assistant_message = {
         "role": "assistant",
         "content": generated["response"],
